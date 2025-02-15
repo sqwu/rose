@@ -1,12 +1,13 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <title>3D Rose</title>
+    <title>小希</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap');
         body {
             margin: 0;
             overflow: hidden;
-            background-color: #f5e6d3;  /*温暖的背景色*/
+            background-color: #f5e6d3;
         }
         #canvas {
             position: fixed;
@@ -15,38 +16,133 @@
             z-index: 1;
         }
         .valueDisplay {
-            display: none;  /*隐藏所有滑块*/
+            display: none;
         }
         .Slider {
-            display: none;  /*隐藏所有滑块*/
+            display: none;
         }
         #textDisplay {
             position: absolute;
-            top: 20px;
-            width: 100%;
-            text-align: center;
-            font-family: 'Brush Script MT', 'Playfair Display', Arial, sans-serif;
-            font-size: 32px;
+            padding: 10px 20px;
+            font-family: 'Dancing Script', cursive;
+            font-size: 38px;
             color: #6b3e30;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
             user-select: none;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            backdrop-filter: blur(5px);
+            z-index: 2;
+        }
+        #textDisplay:hover {
+            transform: scale(1.05);
+        }
+        .heart {
+            position: absolute;
+            pointer-events: none;
+            z-index: 2;
+            transform-origin: center;
+            opacity: 0.8;
         }
     </style>
 </head>
 <body>
-    <div id="textDisplay">小希妹妹幸福相伴</div>
+    <div id="textDisplay">小希妹妹❤幸福常伴</div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
     <script>
         let v = [];
         let cols = 600, rows = 30;
         let t_D = 180 * 15 / cols;
         let r_D = 1 / rows;
-        let targetOpening = 0;
-        let isBlooming = true;
+        let fixedOpening = 8.5;
+        let defaultCurve1 = 3;
+        let defaultCurve2 = 1.4;
+
+        // 文字动画相关变量
+        let textElement;
+        let textX = 0;
+        let textY = 0;
+        let velocityX = 3;
+        let velocityY = 2;
+        let friction = 0.98;
+        let gravity = 0.2;
+        let bounce = 0.8;
 
         let opening, vDensity, pAlign, curve1, curve2;
         let opening_, vDensity_, pAlign_, curve1_, curve2_;
         let canvas;
+
+        // 爱心相关变量
+        let hearts = [];
+        const heartColors = ['#FF69B4', '#FF1493', '#DB7093', '#FFB6C1', '#FFC0CB'];
+
+        class Heart {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.size = random(20, 40);
+                this.velocityX = random(-2, 2);
+                this.velocityY = random(-8, -4);
+                this.rotation = random(-30, 30);
+                this.rotationSpeed = random(-2, 2);
+                this.opacity = 1;
+                this.color = random(heartColors);
+                this.element = this.createHeartElement();
+                document.body.appendChild(this.element);
+            }
+
+            createHeartElement() {
+                const heart = document.createElement('div');
+                heart.className = 'heart';
+                heart.innerHTML = `
+                    <svg width="${this.size}" height="${this.size}" viewBox="0 0 24 24" fill="${this.color}">
+                        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                    </svg>
+                `;
+                return heart;
+            }
+
+            update() {
+                this.velocityY += 0.2;
+                this.x += this.velocityX;
+                this.y += this.velocityY;
+                this.rotation += this.rotationSpeed;
+                this.opacity -= 0.008;
+
+                this.element.style.transform = `translate(${this.x}px, ${this.y}px) rotate(${this.rotation}deg)`;
+                this.element.style.opacity = this.opacity;
+
+                return this.opacity > 0 && this.y < window.innerHeight;
+            }
+
+            remove() {
+                this.element.remove();
+            }
+        }
+
+        function random(min, max) {
+            return Math.random() * (max - min) + min;
+        }
+
+        function createHeartsAtClick(event) {
+            const numHearts = random(5, 8);
+            for (let i = 0; i < numHearts; i++) {
+                hearts.push(new Heart(event.clientX, event.clientY));
+            }
+        }
+
+        function updateHearts() {
+            hearts = hearts.filter(heart => {
+                const alive = heart.update();
+                if (!alive) {
+                    heart.remove();
+                }
+                return alive;
+            });
+            requestAnimationFrame(updateHearts);
+        }
 
         function setup() {
             canvas = createCanvas(windowWidth, windowHeight, WEBGL);
@@ -56,13 +152,25 @@
             angleMode(DEGREES);
             noStroke();
 
-            // Create text display
-            createTextDisplay();
+            // 初始化文字位置
+            textElement = document.getElementById('textDisplay');
+            textX = windowWidth / 2 - textElement.offsetWidth / 2;
+            textY = 20;
+            updateTextPosition();
 
-            // Initialize sliders (hidden)
+            // 开始文字动画
+            animateText();
+
+            // 添加点击监听
+            document.addEventListener('click', createHeartsAtClick);
+
+            // 初始化爱心动画
+            updateHearts();
+
+            // Initialize sliders
             opening_ = createDiv();
             opening_.class('valueDisplay');
-            opening = createSlider(1, 10, 0, 0.1);
+            opening = createSlider(1, 10, fixedOpening, 0.1);
             opening.class('Slider');
 
             vDensity_ = createDiv();
@@ -77,48 +185,56 @@
 
             curve1_ = createDiv();
             curve1_.class('valueDisplay');
-            curve1 = createSlider(-6, 6, 2, 0.1);
+            curve1 = createSlider(-6, 6, defaultCurve1, 0.1);
             curve1.class('Slider');
 
             curve2_ = createDiv();
             curve2_.class('valueDisplay');
-            curve2 = createSlider(0.5, 1.5, 1.3, 0.1);
+            curve2 = createSlider(0.5, 1.5, defaultCurve2, 0.1);
             curve2.class('Slider');
 
-            frameRate(30);
+            frameRate(60);
         }
 
-        function createTextDisplay() {
-            const textDisplay = createDiv('小希妹妹幸福相伴');
-            textDisplay.id('textDisplay');
-            textDisplay.style('font-size', '32px');
-            textDisplay.style('font-family', "'Brush Script MT', 'Playfair Display', Arial, sans-serif");
-            textDisplay.style('color', '#6b3e30');
-            textDisplay.style('position', 'absolute');
-            textDisplay.style('top', '20px');
-            textDisplay.style('width', '100%');
-            textDisplay.style('text-align', 'center');
-            textDisplay.style('text-shadow', '2px 2px 4px rgba(0,0,0,0.2)');
+        function updateTextPosition() {
+            textElement.style.transform = `translate(${textX}px, ${textY}px)`;
+        }
+
+        function animateText() {
+            textX += velocityX;
+            textY += velocityY;
+
+            velocityY += gravity;
+            velocityX *= friction;
+            velocityY *= friction;
+
+            const maxX = windowWidth - textElement.offsetWidth;
+            const maxY = windowHeight - textElement.offsetHeight;
+
+            if (textX <= 0) {
+                textX = 0;
+                velocityX = Math.abs(velocityX) * bounce;
+            } else if (textX >= maxX) {
+                textX = maxX;
+                velocityX = -Math.abs(velocityX) * bounce;
+            }
+
+            if (textY <= 0) {
+                textY = 0;
+                velocityY = Math.abs(velocityY) * bounce;
+            } else if (textY >= maxY) {
+                textY = maxY;
+                velocityY = -Math.abs(velocityY) * bounce;
+            }
+
+            updateTextPosition();
+            requestAnimationFrame(animateText);
         }
 
         function draw() {
             clear();
             orbitControl(4, 4);
             rotateX(-30);
-
-            // Animate opening with bloom/wilt effect
-            if (isBlooming) {
-                targetOpening = min(targetOpening + 0.02, 10);
-                if (targetOpening >= 10) {
-                    isBlooming = false;
-                }
-            } else {
-                targetOpening = max(targetOpening - 0.02, 0);
-                if (targetOpening <= 0) {
-                    isBlooming = true;
-                }
-            }
-            opening.value(targetOpening);
 
             for (let r = 0; r <= rows; r++) {
                 v.push([]);
@@ -154,6 +270,11 @@
 
         function windowResized() {
             resizeCanvas(windowWidth, windowHeight);
+            const maxX = windowWidth - textElement.offsetWidth;
+            const maxY = windowHeight - textElement.offsetHeight;
+            textX = constrain(textX, 0, maxX);
+            textY = constrain(textY, 0, maxY);
+            updateTextPosition();
         }
     </script>
 </body>
