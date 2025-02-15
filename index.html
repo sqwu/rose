@@ -35,21 +35,64 @@
             border-radius: 15px;
             backdrop-filter: blur(5px);
             z-index: 2;
+            background: linear-gradient(45deg, #ff69b4, #ffb6c1, #fff);
+          -webkit-background-clip: text;
+          text-shadow: 2px 2px 4px rgba(255,105,180,0.3),
+                      -2px -2px 4px rgba(255,182,193,0.3),
+                      0 0 8px rgba(255,255,255,0.5);
+          animation: glow 1.5s ease-in-out infinite alternate;
         }
         #textDisplay:hover {
             transform: scale(1.05);
         }
-        .heart {
-            position: absolute;
-            pointer-events: none;
-            z-index: 2;
+        #hint {
+            position: fixed;
+            right: 30px;
+            bottom: 30px;
+            font-family: 'Dancing Script', 'KaiTi', cursive;
+            font-size: 28px;
+            color: #ff69b4;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 12px 24px;
+            border-radius: 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            animation: float 2.5s ease-in-out infinite;
+            z-index: 3;
             transform-origin: center;
-            opacity: 0.8;
+            border: 2px solid #ffc0cb;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(-3deg); }
+            50% { transform: translateY(-15px) rotate(3deg); }
+        }
+        @keyframes glow {
+          from {
+            filter: drop-shadow(0 0 2px rgba(255,105,180,0.6));
+          }
+          to {
+            filter: drop-shadow(0 0 8px rgba(255,182,193,0.9));
+          }
+        }
+
+        /* 新增爱心特效 */
+        #textDisplay::after {
+          content: "✨";
+          position: absolute;
+          right: -0.5em;
+          top: -0.2em;
+          animation: sparkle 1s linear infinite;
+        }
+
+        @keyframes sparkle {
+          0% { transform: scale(0.8); opacity: 0.8; }
+          50% { transform: scale(1.2); opacity: 1; }
+          100% { transform: scale(0.8); opacity: 0.8; }
         }
     </style>
 </head>
 <body>
     <div id="textDisplay">小希妹妹❤幸福常伴</div>
+    <div id="hint">可以拖拽哦~</div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
     <script>
         let v = [];
@@ -74,74 +117,8 @@
         let opening_, vDensity_, pAlign_, curve1_, curve2_;
         let canvas;
 
-        // 爱心相关变量
-        let hearts = [];
-        const heartColors = ['#FF69B4', '#FF1493', '#DB7093', '#FFB6C1', '#FFC0CB'];
-
-        class Heart {
-            constructor(x, y) {
-                this.x = x;
-                this.y = y;
-                this.size = random(20, 40);
-                this.velocityX = random(-2, 2);
-                this.velocityY = random(-8, -4);
-                this.rotation = random(-30, 30);
-                this.rotationSpeed = random(-2, 2);
-                this.opacity = 1;
-                this.color = random(heartColors);
-                this.element = this.createHeartElement();
-                document.body.appendChild(this.element);
-            }
-
-            createHeartElement() {
-                const heart = document.createElement('div');
-                heart.className = 'heart';
-                heart.innerHTML = `
-                    <svg width="${this.size}" height="${this.size}" viewBox="0 0 24 24" fill="${this.color}">
-                        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                    </svg>
-                `;
-                return heart;
-            }
-
-            update() {
-                this.velocityY += 0.2;
-                this.x += this.velocityX;
-                this.y += this.velocityY;
-                this.rotation += this.rotationSpeed;
-                this.opacity -= 0.008;
-
-                this.element.style.transform = `translate(${this.x}px, ${this.y}px) rotate(${this.rotation}deg)`;
-                this.element.style.opacity = this.opacity;
-
-                return this.opacity > 0 && this.y < window.innerHeight;
-            }
-
-            remove() {
-                this.element.remove();
-            }
-        }
-
         function random(min, max) {
             return Math.random() * (max - min) + min;
-        }
-
-        function createHeartsAtClick(event) {
-            const numHearts = random(5, 8);
-            for (let i = 0; i < numHearts; i++) {
-                hearts.push(new Heart(event.clientX, event.clientY));
-            }
-        }
-
-        function updateHearts() {
-            hearts = hearts.filter(heart => {
-                const alive = heart.update();
-                if (!alive) {
-                    heart.remove();
-                }
-                return alive;
-            });
-            requestAnimationFrame(updateHearts);
         }
 
         function setup() {
@@ -160,12 +137,6 @@
 
             // 开始文字动画
             animateText();
-
-            // 添加点击监听
-            document.addEventListener('click', createHeartsAtClick);
-
-            // 初始化爱心动画
-            updateHearts();
 
             // Initialize sliders
             opening_ = createDiv();
