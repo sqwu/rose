@@ -11,6 +11,7 @@
             overflow: hidden;
             background-color: #f5e6d3;
             -webkit-tap-highlight-color: transparent;
+            -webkit-overflow-scrolling: touch; /* 启用iOS惯性滚动 */
         }
         #canvas {
             position: fixed;
@@ -18,6 +19,7 @@
             left: 0;
             z-index: 1;
             touch-action: none;
+            -webkit-user-drag: none; /* 禁用Safari默认拖动 */
         }
         .valueDisplay {
             display: none;
@@ -126,15 +128,21 @@
             canvas = createCanvas(windowWidth, windowHeight, WEBGL);
             canvas.id('canvas');
             
-            // 移动端触摸优化
-            canvas.elt.style.touchAction = 'none';
-            canvas.elt.addEventListener('touchstart', e => e.preventDefault());
-            canvas.elt.addEventListener('touchmove', e => e.preventDefault());
+            // 增强Safari触摸支持
+            const preventTouch = e => {
+                e.preventDefault();
+                e.stopPropagation();
+            };
             
-            // 调整轨道控制灵敏度
-            setMoveThreshold(1);
-            setShakeThreshold(30);
+            // 绑定所有触摸事件类型
+            ['touchstart', 'touchmove', 'touchend', 'touchcancel'].forEach(evt => {
+                canvas.elt.addEventListener(evt, preventTouch, { passive: false });
+            });
 
+            // 调整移动灵敏度
+            setMoveThreshold(0.5);  // 更低的触发阈值
+            setShakeThreshold(100); // 更高的摇动容差
+            
             colorMode(HSB);
             angleMode(DEGREES);
             noStroke();
@@ -176,6 +184,43 @@
             frameRate(60);
         }
 
+        function draw() {
+            clear();
+            orbitControl(1.5, 1.5, 0.3); // 调整后的Safari专用参数
+            rotateX(-30);
+            
+            for (let r = 0; r <= rows; r++) {
+                v.push([]);
+                for (let theta = 0; theta <= cols; theta++) {
+                    let phi = (180 / opening.value()) * Math.exp(-theta * t_D / (vDensity.value() * 180));
+                    let petalCut = 1 - (1 / 2) * pow((5 / 4) * pow(1 - ((pAlign.value() * theta * t_D % 360) / 180), 2) - 1 / 4, 2);
+                    let hangDown = curve1.value() * pow(r * r_D, 2) * pow(curve2.value() * r * r_D - 1, 2) * sin(phi);
+
+                    let pX = 260 * petalCut * (r * r_D * sin(phi) + hangDown * cos(phi)) * sin(theta * t_D);
+                    let pY = -260 * petalCut * (r * r_D * cos(phi) - hangDown * sin(phi));
+                    let pZ = 260 * petalCut * (r * r_D * sin(phi) + hangDown * cos(phi)) * cos(theta * t_D);
+                    let pos = createVector(pX, pY, pZ);
+                    v[r].push(pos);
+                }
+            }
+
+            for (let r = 0; r < v.length; r++) {
+                fill(340, 100, -20 + r * r_D * 120);
+                for (let theta = 0; theta < v[r].length; theta++) {
+                    if (r < v.length - 1 && theta < v[r].length - 1) {
+                        beginShape();
+                        vertex(v[r][theta].x, v[r][theta].y, v[r][theta].z);
+                        vertex(v[r + 1][theta].x, v[r + 1][theta].y, v[r + 1][theta].z);
+                        vertex(v[r + 1][theta + 1].x, v[r + 1][theta + 1].y, v[r + 1][theta + 1].z);
+                        vertex(v[r][theta + 1].x, v[r][theta + 1].y, v[r][theta + 1].z);
+                        endShape(CLOSE);
+                    }
+                }
+            }
+
+            v = [];
+        }
+
         function updateTextPosition() {
             textElement.style.transform = `translate(${textX}px, ${textY}px)`;
         }
@@ -209,43 +254,6 @@
 
             updateTextPosition();
             requestAnimationFrame(animateText);
-        }
-
-        function draw() {
-            clear();
-            orbitControl(2, 2, 0.5); // 调整后的轨道控制参数
-            rotateX(-30);
-
-            for (let r = 0; r <= rows; r++) {
-                v.push([]);
-                for (let theta = 0; theta <= cols; theta++) {
-                    let phi = (180 / opening.value()) * Math.exp(-theta * t_D / (vDensity.value() * 180));
-                    let petalCut = 1 - (1 / 2) * pow((5 / 4) * pow(1 - ((pAlign.value() * theta * t_D % 360) / 180), 2) - 1 / 4, 2);
-                    let hangDown = curve1.value() * pow(r * r_D, 2) * pow(curve2.value() * r * r_D - 1, 2) * sin(phi);
-
-                    let pX = 260 * petalCut * (r * r_D * sin(phi) + hangDown * cos(phi)) * sin(theta * t_D);
-                    let pY = -260 * petalCut * (r * r_D * cos(phi) - hangDown * sin(phi));
-                    let pZ = 260 * petalCut * (r * r_D * sin(phi) + hangDown * cos(phi)) * cos(theta * t_D);
-                    let pos = createVector(pX, pY, pZ);
-                    v[r].push(pos);
-                }
-            }
-
-            for (let r = 0; r < v.length; r++) {
-                fill(340, 100, -20 + r * r_D * 120);
-                for (let theta = 0; theta < v[r].length; theta++) {
-                    if (r < v.length - 1 && theta < v[r].length - 1) {
-                        beginShape();
-                        vertex(v[r][theta].x, v[r][theta].y, v[r][theta].z);
-                        vertex(v[r + 1][theta].x, v[r + 1][theta].y, v[r + 1][theta].z);
-                        vertex(v[r + 1][theta + 1].x, v[r + 1][theta + 1].y, v[r + 1][theta + 1].z);
-                        vertex(v[r][theta + 1].x, v[r][theta + 1].y, v[r][theta + 1].z);
-                        endShape(CLOSE);
-                    }
-                }
-            }
-
-            v = [];
         }
 
         function windowResized() {
