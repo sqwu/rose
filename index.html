@@ -45,9 +45,7 @@
                         0 0 8px rgba(255,255,255,0.5);
             animation: glow 1.5s ease-in-out infinite alternate;
         }
-        #textDisplay:hover {
-            transform: scale(1.05);
-        }
+        
         #hint {
             position: fixed;
             right: 30px;
@@ -64,6 +62,31 @@
             transform-origin: center;
             border: 2px solid #ffc0cb;
         }
+
+        .heart {
+            position: absolute;
+            font-size: 20px;
+            color: #ff69b4;
+            pointer-events: none;
+            z-index: 1;
+            opacity: 0;
+            animation: float-up 3s ease-out forwards;
+        }
+
+        @keyframes float-up {
+            0% {
+                transform: translateY(0) scale(1);
+                opacity: 0;
+            }
+            20% {
+                opacity: 0.8;
+            }
+            100% {
+                transform: translateY(-100vh) scale(0);
+                opacity: 0;
+            }
+        }
+
         @keyframes float {
             0%, 100% { transform: translateY(0) rotate(-3deg); }
             50% { transform: translateY(-15px) rotate(3deg); }
@@ -75,20 +98,6 @@
             to {
                 filter: drop-shadow(0 0 8px rgba(255,182,193,0.9));
             }
-        }
-
-        #textDisplay::after {
-            content: "✨";
-            position: absolute;
-            right: -0.5em;
-            top: -0.2em;
-            animation: sparkle 1s linear infinite;
-        }
-
-        @keyframes sparkle {
-            0% { transform: scale(0.8); opacity: 0.8; }
-            50% { transform: scale(1.2); opacity: 1; }
-            100% { transform: scale(0.8); opacity: 0.8; }
         }
     </style>
 </head>
@@ -115,6 +124,10 @@
         let gravity = 0.2;
         let bounce = 0.8;
 
+        // 设备方向相关变量
+        let beta = 0;
+        let gamma = 0;
+
         // 3D控制相关变量
         let rotationX = -30;
         let rotationY = 0;
@@ -124,17 +137,43 @@
         let lastY;
         let isDragging = false;
 
+        // 玫瑰花缩放因子
+        let scaleFactor;
+
         let opening, vDensity, pAlign, curve1, curve2;
         let opening_, vDensity_, pAlign_, curve1_, curve2_;
         let canvas;
 
-        function random(min, max) {
-            return Math.random() * (max - min) + min;
+        // 创建随机爱心
+        function createHeart() {
+            const heart = document.createElement('div');
+            heart.className = 'heart';
+            heart.innerHTML = '❤';
+            heart.style.left = Math.random() * window.innerWidth + 'px';
+            heart.style.bottom = '0';
+            document.body.appendChild(heart);
+            
+            // 动画结束后移除元素
+            heart.addEventListener('animationend', () => {
+                heart.remove();
+            });
         }
+
+        // 定期创建爱心
+        setInterval(createHeart, 300);
+
+        // 监听设备方向变化
+        window.addEventListener('deviceorientation', function(event) {
+            beta = event.beta;  // 前后倾斜
+            gamma = event.gamma; // 左右倾斜
+        });
 
         function setup() {
             canvas = createCanvas(windowWidth, windowHeight, WEBGL);
             canvas.id('canvas');
+            
+            // 计算缩放因子
+            scaleFactor = min(windowWidth, windowHeight) / 1000;
 
             let canvasElement = document.getElementById('canvas');
             
@@ -189,33 +228,43 @@
             frameRate(60);
         }
 
-        // 统一的拖拽开始处理函数
         function handleDragStart(event) {
             event.preventDefault();
-            isDragging = true;
             
-            // 获取起始位置（区分鼠标事件和触摸事件）
+            // 获取点击/触摸位置相对于画布中心的距离
+            let x, y;
             if (event.type === 'mousedown') {
-                startX = event.clientX;
-                startY = event.clientY;
-                lastX = startX;
-                lastY = startY;
+                x = event.clientX - windowWidth/2;
+                y = event.clientY - windowHeight/2;
             } else if (event.type === 'touchstart') {
-                startX = event.touches[0].clientX;
-                startY = event.touches[0].clientY;
-                lastX = startX;
-                lastY = startY;
+                x = event.touches[0].clientX - windowWidth/2;
+                y = event.touches[0].clientY - windowHeight/2;
+            }
+            
+            // 扩大交互区域，检查是否在玫瑰花范围内（包括周围区域）
+            let distance = sqrt(x*x + y*y);
+            if (distance <= 300 * scaleFactor) { // 扩大交互区域
+                isDragging = true;
+                if (event.type === 'mousedown') {
+                    startX = event.clientX;
+                    startY = event.clientY;
+                    lastX = startX;
+                    lastY = startY;
+                } else if (event.type === 'touchstart') {
+                    startX = event.touches[0].clientX;
+                    startY = event.touches[0].clientY;
+                    lastX = startX;
+                    lastY = startY;
+                }
             }
         }
 
-        // 统一的拖拽移动处理函数
         function handleDragMove(event) {
             event.preventDefault();
             if (!isDragging) return;
 
             let currentX, currentY;
             
-            // 获取当前位置（区分鼠标事件和触摸事件）
             if (event.type === 'mousemove') {
                 currentX = event.clientX;
                 currentY = event.clientY;
@@ -224,32 +273,29 @@
                 currentY = event.touches[0].clientY;
             }
 
-            // 计算位置变化
             const deltaX = currentX - lastX;
             const deltaY = currentY - lastY;
 
-            // 更新旋转角度
             rotationY += deltaX * 0.5;
             rotationX += deltaY * 0.5;
 
-            // 限制旋转角度范围
             rotationX = constrain(rotationX, -60, 60);
 
-            // 更新最后位置
             lastX = currentX;
             lastY = currentY;
         }
 
-        // 统一的拖拽结束处理函数
         function handleDragEnd(event) {
             isDragging = false;
         }
 
         function updateTextPosition() {
-            textElement.style.transform = `translate(${textX}px, ${textY}px)`;
-        }
+            // 添加重力感应影响
+            if (beta !== null && gamma !== null) {
+                velocityX += gamma * 0.1;
+                velocityY += beta * 0.1;
+            }
 
-        function animateText() {
             textX += velocityX;
             textY += velocityY;
 
@@ -276,13 +322,24 @@
                 velocityY = -Math.abs(velocityY) * bounce;
             }
 
-            updateTextPosition();
+            textElement.style.transform = `translate(${textX}px, ${textY}px)`;
             requestAnimationFrame(animateText);
+        }
+
+        function animateText() {
+            updateTextPosition();
         }
 
         function draw() {
             clear();
-            // 使用自定义的旋转控制
+            
+            // 将坐标系移动到画布中心
+            translate(0, 0, -200); // 稍微往后移动以获得更好的3D效果
+            
+            // 应用缩放
+            scale(scaleFactor);
+            
+            // 应用旋转
             rotateX(rotationX);
             rotateY(rotationY);
 
@@ -320,6 +377,11 @@
 
         function windowResized() {
             resizeCanvas(windowWidth, windowHeight);
+            
+            // 重新计算缩放因子
+            scaleFactor = min(windowWidth, windowHeight) / 1000;
+            
+            // 更新文字位置边界
             const maxX = windowWidth - textElement.offsetWidth;
             const maxY = windowHeight - textElement.offsetHeight;
             textX = constrain(textX, 0, maxX);
