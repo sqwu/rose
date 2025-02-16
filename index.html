@@ -2,21 +2,18 @@
 <html lang="zh-CN">
 <head>
     <title>小希</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap');
         body {
             margin: 0;
             overflow: hidden;
             background-color: #f5e6d3;
-            touch-action: none;
         }
         #canvas {
             position: fixed;
             top: 0;
             left: 0;
             z-index: 1;
-            touch-action: none;
         }
         .valueDisplay {
             display: none;
@@ -39,13 +36,15 @@
             backdrop-filter: blur(5px);
             z-index: 2;
             background: linear-gradient(45deg, #ff69b4, #ffb6c1, #fff);
-            -webkit-background-clip: text;
-            text-shadow: 2px 2px 4px rgba(255,105,180,0.3),
-                        -2px -2px 4px rgba(255,182,193,0.3),
-                        0 0 8px rgba(255,255,255,0.5);
-            animation: glow 1.5s ease-in-out infinite alternate;
+          -webkit-background-clip: text;
+          text-shadow: 2px 2px 4px rgba(255,105,180,0.3),
+                      -2px -2px 4px rgba(255,182,193,0.3),
+                      0 0 8px rgba(255,255,255,0.5);
+          animation: glow 1.5s ease-in-out infinite alternate;
         }
-        
+        #textDisplay:hover {
+            transform: scale(1.05);
+        }
         #hint {
             position: fixed;
             right: 30px;
@@ -62,18 +61,32 @@
             transform-origin: center;
             border: 2px solid #ffc0cb;
         }
-
         @keyframes float {
             0%, 100% { transform: translateY(0) rotate(-3deg); }
             50% { transform: translateY(-15px) rotate(3deg); }
         }
         @keyframes glow {
-            from {
-                filter: drop-shadow(0 0 2px rgba(255,105,180,0.6));
-            }
-            to {
-                filter: drop-shadow(0 0 8px rgba(255,182,193,0.9));
-            }
+          from {
+            filter: drop-shadow(0 0 2px rgba(255,105,180,0.6));
+          }
+          to {
+            filter: drop-shadow(0 0 8px rgba(255,182,193,0.9));
+          }
+        }
+
+        /* 新增爱心特效 */
+        #textDisplay::after {
+          content: "✨";
+          position: absolute;
+          right: -0.5em;
+          top: -0.2em;
+          animation: sparkle 1s linear infinite;
+        }
+
+        @keyframes sparkle {
+          0% { transform: scale(0.8); opacity: 0.8; }
+          50% { transform: scale(1.2); opacity: 1; }
+          100% { transform: scale(0.8); opacity: 0.8; }
         }
     </style>
 </head>
@@ -100,94 +113,32 @@
         let gravity = 0.2;
         let bounce = 0.8;
 
-        // 设备方向相关变量
-        let beta = 0;
-        let gamma = 0;
-
-        // 3D控制相关变量
-        let rotationX = -30;
-        let rotationY = 0;
-        let startX;
-        let startY;
-        let lastX;
-        let lastY;
-        let isDragging = false;
-
-        // 玫瑰花数组和相关参数
-        const ROSE_COUNT = 99;
-        let roses = [];
-        
-        // 玫瑰花缩放因子
-        let scaleFactor;
-
         let opening, vDensity, pAlign, curve1, curve2;
         let opening_, vDensity_, pAlign_, curve1_, curve2_;
         let canvas;
 
-        // 监听设备方向变化
-        window.addEventListener('deviceorientation', function(event) {
-            beta = event.beta;  // 前后倾斜
-            gamma = event.gamma; // 左右倾斜
-        });
-
-        // 初始化玫瑰花位置
-        function initRoses() {
-            roses = [];
-            const radius = 800; // 分布半径
-            const heightRange = 600; // 高度范围
-            
-            for (let i = 0; i < ROSE_COUNT; i++) {
-                // 使用极坐标计算位置，确保均匀分布
-                const angle = (i / ROSE_COUNT) * TWO_PI;
-                const r = random(0, radius);
-                const x = r * cos(angle);
-                const y = random(-heightRange/2, heightRange/2);
-                const z = r * sin(angle);
-                
-                // 为每朵花添加随机旋转
-                const rotX = random(-30, 30);
-                const rotY = random(0, 360);
-                const rotZ = random(-30, 30);
-                
-                // 随机大小变化
-                const scale = random(0.3, 0.7);
-                
-                roses.push({x, y, z, rotX, rotY, rotZ, scale});
-            }
+        function random(min, max) {
+            return Math.random() * (max - min) + min;
         }
 
         function setup() {
             canvas = createCanvas(windowWidth, windowHeight, WEBGL);
             canvas.id('canvas');
-            
-            // 计算缩放因子
-            scaleFactor = min(windowWidth, windowHeight) / 1000;
-
-            let canvasElement = document.getElementById('canvas');
-            
-            // 鼠标事件监听
-            canvasElement.addEventListener('mousedown', handleDragStart);
-            canvasElement.addEventListener('mousemove', handleDragMove);
-            canvasElement.addEventListener('mouseup', handleDragEnd);
-            canvasElement.addEventListener('mouseleave', handleDragEnd);
-            
-            // 触摸事件监听
-            canvasElement.addEventListener('touchstart', handleDragStart);
-            canvasElement.addEventListener('touchmove', handleDragMove);
-            canvasElement.addEventListener('touchend', handleDragEnd);
-            canvasElement.addEventListener('touchcancel', handleDragEnd);
 
             colorMode(HSB);
             angleMode(DEGREES);
             noStroke();
 
+            // 初始化文字位置
             textElement = document.getElementById('textDisplay');
             textX = windowWidth / 2 - textElement.offsetWidth / 2;
             textY = 20;
             updateTextPosition();
 
+            // 开始文字动画
             animateText();
 
+            // Initialize sliders
             opening_ = createDiv();
             opening_.class('valueDisplay');
             opening = createSlider(1, 10, fixedOpening, 0.1);
@@ -213,77 +164,14 @@
             curve2 = createSlider(0.5, 1.5, defaultCurve2, 0.1);
             curve2.class('Slider');
 
-            // 初始化玫瑰花位置
-            initRoses();
-
             frameRate(60);
         }
 
-        function handleDragStart(event) {
-            event.preventDefault();
-            
-            let x, y;
-            if (event.type === 'mousedown') {
-                x = event.clientX - windowWidth/2;
-                y = event.clientY - windowHeight/2;
-            } else if (event.type === 'touchstart') {
-                x = event.touches[0].clientX - windowWidth/2;
-                y = event.touches[0].clientY - windowHeight/2;
-            }
-            
-            let distance = sqrt(x*x + y*y);
-            if (distance <= 1000 * scaleFactor) {
-                isDragging = true;
-                if (event.type === 'mousedown') {
-                    startX = event.clientX;
-                    startY = event.clientY;
-                    lastX = startX;
-                    lastY = startY;
-                } else if (event.type === 'touchstart') {
-                    startX = event.touches[0].clientX;
-                    startY = event.touches[0].clientY;
-                    lastX = startX;
-                    lastY = startY;
-                }
-            }
-        }
-
-        function handleDragMove(event) {
-            event.preventDefault();
-            if (!isDragging) return;
-
-            let currentX, currentY;
-            
-            if (event.type === 'mousemove') {
-                currentX = event.clientX;
-                currentY = event.clientY;
-            } else if (event.type === 'touchmove') {
-                currentX = event.touches[0].clientX;
-                currentY = event.touches[0].clientY;
-            }
-
-            const deltaX = currentX - lastX;
-            const deltaY = currentY - lastY;
-
-            rotationY += deltaX * 0.5;
-            rotationX += deltaY * 0.5;
-
-            rotationX = constrain(rotationX, -60, 60);
-
-            lastX = currentX;
-            lastY = currentY;
-        }
-
-        function handleDragEnd(event) {
-            isDragging = false;
-        }
-
         function updateTextPosition() {
-            if (beta !== null && gamma !== null) {
-                velocityX += gamma * 0.1;
-                velocityY += beta * 0.1;
-            }
+            textElement.style.transform = `translate(${textX}px, ${textY}px)`;
+        }
 
+        function animateText() {
             textX += velocityX;
             textY += velocityY;
 
@@ -310,21 +198,14 @@
                 velocityY = -Math.abs(velocityY) * bounce;
             }
 
-            textElement.style.transform = `translate(${textX}px, ${textY}px)`;
+            updateTextPosition();
             requestAnimationFrame(animateText);
         }
 
-        function animateText() {
-            updateTextPosition();
-        }
-
-        function drawRose(x, y, z, rotX, rotY, rotZ, scale) {
-            push();
-            translate(x, y, z);
-            rotateX(rotX);
-            rotateY(rotY);
-            rotateZ(rotZ);
-            scale(scale);
+        function draw() {
+            clear();
+            orbitControl(4, 4);
+            rotateX(-30);
 
             for (let r = 0; r <= rows; r++) {
                 v.push([]);
@@ -354,32 +235,12 @@
                     }
                 }
             }
+
             v = [];
-            pop();
-        }
-
-        function draw() {
-            clear();
-            
-            translate(0, 0, -800);
-            scale(scaleFactor);
-            
-            rotateX(rotationX);
-            rotateY(rotationY);
-
-            // 绘制所有玫瑰
-            for (let rose of roses) {
-                drawRose(rose.x, rose.y, rose.z, rose.rotX, rose.rotY, rose.rotZ, rose.scale);
-            }
         }
 
         function windowResized() {
             resizeCanvas(windowWidth, windowHeight);
-            
-            // 重新计算缩放因子
-            scaleFactor = min(windowWidth, windowHeight) / 1000;
-            
-            // 更新文字位置边界
             const maxX = windowWidth - textElement.offsetWidth;
             const maxY = windowHeight - textElement.offsetHeight;
             textX = constrain(textX, 0, maxX);
