@@ -2,18 +2,21 @@
 <html lang="zh-CN">
 <head>
     <title>小希</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap');
         body {
             margin: 0;
             overflow: hidden;
             background-color: #f5e6d3;
+            touch-action: none;
         }
         #canvas {
             position: fixed;
             top: 0;
             left: 0;
             z-index: 1;
+            touch-action: none;
         }
         .valueDisplay {
             display: none;
@@ -36,11 +39,11 @@
             backdrop-filter: blur(5px);
             z-index: 2;
             background: linear-gradient(45deg, #ff69b4, #ffb6c1, #fff);
-          -webkit-background-clip: text;
-          text-shadow: 2px 2px 4px rgba(255,105,180,0.3),
-                      -2px -2px 4px rgba(255,182,193,0.3),
-                      0 0 8px rgba(255,255,255,0.5);
-          animation: glow 1.5s ease-in-out infinite alternate;
+            -webkit-background-clip: text;
+            text-shadow: 2px 2px 4px rgba(255,105,180,0.3),
+                        -2px -2px 4px rgba(255,182,193,0.3),
+                        0 0 8px rgba(255,255,255,0.5);
+            animation: glow 1.5s ease-in-out infinite alternate;
         }
         #textDisplay:hover {
             transform: scale(1.05);
@@ -66,27 +69,26 @@
             50% { transform: translateY(-15px) rotate(3deg); }
         }
         @keyframes glow {
-          from {
-            filter: drop-shadow(0 0 2px rgba(255,105,180,0.6));
-          }
-          to {
-            filter: drop-shadow(0 0 8px rgba(255,182,193,0.9));
-          }
+            from {
+                filter: drop-shadow(0 0 2px rgba(255,105,180,0.6));
+            }
+            to {
+                filter: drop-shadow(0 0 8px rgba(255,182,193,0.9));
+            }
         }
 
-        /* 新增爱心特效 */
         #textDisplay::after {
-          content: "✨";
-          position: absolute;
-          right: -0.5em;
-          top: -0.2em;
-          animation: sparkle 1s linear infinite;
+            content: "✨";
+            position: absolute;
+            right: -0.5em;
+            top: -0.2em;
+            animation: sparkle 1s linear infinite;
         }
 
         @keyframes sparkle {
-          0% { transform: scale(0.8); opacity: 0.8; }
-          50% { transform: scale(1.2); opacity: 1; }
-          100% { transform: scale(0.8); opacity: 0.8; }
+            0% { transform: scale(0.8); opacity: 0.8; }
+            50% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(0.8); opacity: 0.8; }
         }
     </style>
 </head>
@@ -113,6 +115,15 @@
         let gravity = 0.2;
         let bounce = 0.8;
 
+        // 3D控制相关变量
+        let rotationX = -30;
+        let rotationY = 0;
+        let startX;
+        let startY;
+        let lastX;
+        let lastY;
+        let isDragging = false;
+
         let opening, vDensity, pAlign, curve1, curve2;
         let opening_, vDensity_, pAlign_, curve1_, curve2_;
         let canvas;
@@ -125,20 +136,31 @@
             canvas = createCanvas(windowWidth, windowHeight, WEBGL);
             canvas.id('canvas');
 
+            let canvasElement = document.getElementById('canvas');
+            
+            // 鼠标事件监听
+            canvasElement.addEventListener('mousedown', handleDragStart);
+            canvasElement.addEventListener('mousemove', handleDragMove);
+            canvasElement.addEventListener('mouseup', handleDragEnd);
+            canvasElement.addEventListener('mouseleave', handleDragEnd);
+            
+            // 触摸事件监听
+            canvasElement.addEventListener('touchstart', handleDragStart);
+            canvasElement.addEventListener('touchmove', handleDragMove);
+            canvasElement.addEventListener('touchend', handleDragEnd);
+            canvasElement.addEventListener('touchcancel', handleDragEnd);
+
             colorMode(HSB);
             angleMode(DEGREES);
             noStroke();
 
-            // 初始化文字位置
             textElement = document.getElementById('textDisplay');
             textX = windowWidth / 2 - textElement.offsetWidth / 2;
             textY = 20;
             updateTextPosition();
 
-            // 开始文字动画
             animateText();
 
-            // Initialize sliders
             opening_ = createDiv();
             opening_.class('valueDisplay');
             opening = createSlider(1, 10, fixedOpening, 0.1);
@@ -165,6 +187,62 @@
             curve2.class('Slider');
 
             frameRate(60);
+        }
+
+        // 统一的拖拽开始处理函数
+        function handleDragStart(event) {
+            event.preventDefault();
+            isDragging = true;
+            
+            // 获取起始位置（区分鼠标事件和触摸事件）
+            if (event.type === 'mousedown') {
+                startX = event.clientX;
+                startY = event.clientY;
+                lastX = startX;
+                lastY = startY;
+            } else if (event.type === 'touchstart') {
+                startX = event.touches[0].clientX;
+                startY = event.touches[0].clientY;
+                lastX = startX;
+                lastY = startY;
+            }
+        }
+
+        // 统一的拖拽移动处理函数
+        function handleDragMove(event) {
+            event.preventDefault();
+            if (!isDragging) return;
+
+            let currentX, currentY;
+            
+            // 获取当前位置（区分鼠标事件和触摸事件）
+            if (event.type === 'mousemove') {
+                currentX = event.clientX;
+                currentY = event.clientY;
+            } else if (event.type === 'touchmove') {
+                currentX = event.touches[0].clientX;
+                currentY = event.touches[0].clientY;
+            }
+
+            // 计算位置变化
+            const deltaX = currentX - lastX;
+            const deltaY = currentY - lastY;
+
+            // 更新旋转角度
+            rotationY += deltaX * 0.5;
+            rotationX += deltaY * 0.5;
+
+            // 限制旋转角度范围
+            rotationX = constrain(rotationX, -60, 60);
+
+            // 更新最后位置
+            lastX = currentX;
+            lastY = currentY;
+        }
+
+        // 统一的拖拽结束处理函数
+        function handleDragEnd(event) {
+            isDragging = false;
         }
 
         function updateTextPosition() {
@@ -204,8 +282,9 @@
 
         function draw() {
             clear();
-            orbitControl(4, 4);
-            rotateX(-30);
+            // 使用自定义的旋转控制
+            rotateX(rotationX);
+            rotateY(rotationY);
 
             for (let r = 0; r <= rows; r++) {
                 v.push([]);
