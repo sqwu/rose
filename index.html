@@ -1,269 +1,223 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html>
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>小希</title>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap');
-        body {
-            margin: 0;
-            overflow: hidden;
-            background-color: #f5e6d3;
-            -webkit-tap-highlight-color: transparent;
-            -webkit-overflow-scrolling: touch; /* 启用iOS惯性滚动 */
-        }
-        #canvas {
-            position: fixed;
-            top: 0;
-            left: 0;
-            z-index: 1;
-            touch-action: none;
-            -webkit-user-drag: none; /* 禁用Safari默认拖动 */
-        }
-        .valueDisplay {
-            display: none;
-        }
-        .Slider {
-            display: none;
-        }
-        #textDisplay {
-            position: absolute;
-            padding: 10px 20px;
-            font-family: 'Dancing Script', cursive;
-            font-size: 38px;
-            color: #6b3e30;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
-            user-select: none;
-            cursor: pointer;
-            transition: transform 0.3s ease;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 15px;
-            backdrop-filter: blur(5px);
-            z-index: 2;
-            background: linear-gradient(45deg, #ff69b4, #ffb6c1, #fff);
-            -webkit-background-clip: text;
-            text-shadow: 2px 2px 4px rgba(255,105,180,0.3),
-                        -2px -2px 4px rgba(255,182,193,0.3),
-                        0 0 8px rgba(255,255,255,0.5);
-            animation: glow 1.5s ease-in-out infinite alternate;
-        }
-        #textDisplay:hover {
-            transform: scale(1.05);
-        }
-        #hint {
-            position: fixed;
-            right: 30px;
-            bottom: 30px;
-            font-family: 'Dancing Script', 'KaiTi', cursive;
-            font-size: 28px;
-            color: #ff69b4;
-            background: rgba(255, 255, 255, 0.9);
-            padding: 12px 24px;
-            border-radius: 30px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            animation: float 2.5s ease-in-out infinite;
-            z-index: 3;
-            transform-origin: center;
-            border: 2px solid #ffc0cb;
-        }
-        @keyframes float {
-            0%, 100% { transform: translateY(0) rotate(-3deg); }
-            50% { transform: translateY(-15px) rotate(3deg); }
-        }
-        @keyframes glow {
-          from {
-            filter: drop-shadow(0 0 2px rgba(255,105,180,0.6));
-          }
-          to {
-            filter: drop-shadow(0 0 8px rgba(255,182,193,0.9));
-          }
-        }
-        #textDisplay::after {
-          content: "✨";
-          position: absolute;
-          right: -0.5em;
-          top: -0.2em;
-          animation: sparkle 1s linear infinite;
-        }
-        @keyframes sparkle {
-          0% { transform: scale(0.8); opacity: 0.8; }
-          50% { transform: scale(1.2); opacity: 1; }
-          100% { transform: scale(0.8); opacity: 0.8; }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="language" content="zh-CN">
+  <meta name="小希" content="rose">
+  <style>
+    body {
+      margin: 0;
+      height: 100vh;
+      overflow: hidden;
+      background-color: #ffe6f2;
+      /* 浪漫的背景颜色 */
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    body:not(.music-started)::before {
+      content: "点击屏幕开启音乐";
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: #ff69b4;
+      font-size: 1.2em;
+      animation: pulse 2s infinite;
+      z-index: 1000;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 0.8; transform: translate(-50%, -50%) scale(1); }
+      50% { opacity: 0.4; transform: translate(-50%, -50%) scale(1.1); }
+      100% { opacity: 0.8; transform: translate(-50%, -50%) scale(1); }
+    }
+
+    .floating-text {
+      font-size: 3em;
+      font-family: 'Arial', sans-serif;
+      color: #ff69b4;
+      /* 甜美的粉色 */
+      text-shadow: 2px 2px 5px rgba(255, 105, 180, 0.5);
+      position: absolute;
+      animation: float 5s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0% {
+        transform: translate(0, 0);
+      }
+
+      25% {
+        transform: translate(100px, -50px);
+      }
+
+      50% {
+        transform: translate(0, -100px);
+      }
+
+      75% {
+        transform: translate(-100px, -50px);
+      }
+
+      100% {
+        transform: translate(0, 0);
+      }
+    }
+
+    .heart {
+      position: absolute;
+      background: linear-gradient(45deg, #ff3f6c, #ff0066);
+      clip-path: path("M12 4.419c-2.826-5.695-11.999-4.064-11.999 3.27 0 7.27 9.903 10.938 11.999 15.311 2.096-4.373 12-8.041 12-15.311 0-7.327-9.17-8.972-12-3.27z");
+      animation: fly 1.2s ease-out forwards;
+      box-shadow: 0 0 15px rgba(255, 63, 108, 0.5);
+      transform-origin: center;
+    }
+
+    @keyframes fly {
+      0% {
+        transform: translate(0, 0) scale(1) rotate(0deg);
+        opacity: 1;
+      }
+
+      50% {
+        transform: translate(var(--x), calc(var(--y) * 0.5)) scale(1.2) rotate(180deg);
+        opacity: 0.8;
+      }
+
+      100% {
+        transform: translate(var(--x), var(--y)) scale(0.5) rotate(360deg);
+        opacity: 0;
+      }
+    }
+
+    .heart::after {
+      content: '';
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: inherit;
+      animation: pulse 1s ease-out infinite;
+    }
+
+    @keyframes pulse {
+      0% {
+        transform: scale(1);
+        opacity: 0.6;
+      }
+
+      100% {
+        transform: scale(2);
+        opacity: 0;
+      }
+    }
+  </style>
 </head>
-<body>
-    <div id="textDisplay">小希妹妹❤幸福常伴</div>
-    <div id="hint">可以拖拽哦~</div>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
-    <script>
-        let v = [];
-        let cols = 600, rows = 30;
-        let t_D = 180 * 15 / cols;
-        let r_D = 1 / rows;
-        let fixedOpening = 8.5;
-        let defaultCurve1 = 3;
-        let defaultCurve2 = 1.4;
+  
 
-        // 文字动画相关变量
-        let textElement;
-        let textX = 0;
-        let textY = 0;
-        let velocityX = 3;
-        let velocityY = 2;
-        let friction = 0.98;
-        let gravity = 0.2;
-        let bounce = 0.8;
+<body class="container"> 
+  
+  <audio id="bgm" loop>
+    <source src="http://music.163.com/song/media/outer/url?id=2075188521.mp3" type="audio/mpeg">
+  </audio>
 
-        let opening, vDensity, pAlign, curve1, curve2;
-        let opening_, vDensity_, pAlign_, curve1_, curve2_;
-        let canvas;
+  <script>
+    // 添加点击事件监听
+    let audioInit = false;
+    
+    document.addEventListener('click', () => {
+      if(!audioInit) {
+        const audio = document.getElementById('bgm');
+        audio.volume = 0.5;
+        audio.play();
+        audioInit = true;
+        
+        // 添加首次点击动画
+        document.body.classList.add('music-started');
+      }
+    });
 
-        function random(min, max) {
-            return Math.random() * (max - min) + min;
-        }
+    // 移动端触摸事件
+    document.addEventListener('touchstart', () => {
+      if(!audioInit) {
+        const audio = document.getElementById('bgm');
+        audio.play();
+        audioInit = true;
+      }
+    });
+  </script>
 
-        function setup() {
-            canvas = createCanvas(windowWidth, windowHeight, WEBGL);
-            canvas.id('canvas');
-            
-            // 增强Safari触摸支持
-            const preventTouch = e => {
-                e.preventDefault();
-                e.stopPropagation();
-            };
-            
-            // 绑定所有触摸事件类型
-            ['touchstart', 'touchmove', 'touchend', 'touchcancel'].forEach(evt => {
-                canvas.elt.addEventListener(evt, preventTouch, { passive: false });
-            });
+  <div class="floating-text">小希妹妹❤幸福常伴</div>
 
-            // 调整移动灵敏度
-            setMoveThreshold(0.5);  // 更低的触发阈值
-            setShakeThreshold(100); // 更高的摇动容差
-            
-            colorMode(HSB);
-            angleMode(DEGREES);
-            noStroke();
+  <canvas id="c"></canvas>
+    
+  <script>  
+    var b = document.body;
+    var c = document.getElementsByTagName('canvas')[0];
+    var a = c.getContext('2d');
+    document.body.clientWidth; 
+  </script>  
+  <script>  
+    with (m = Math) C = cos, S = sin, P = pow, R = random; c.width = c.height = f = 600; h = -250; function p(a, b, c) { if (c > 60) return [S(a * 7) * (13 + 5 / (.2 + P(b * 4, 4))) - S(b) * 50, b * f + 50, 625 + C(a * 7) * (13 + 5 / (.2 + P(b * 4, 4))) + b * 400, a * 1 - b / 2, a]; A = a * 2 - 1; B = b * 2 - 1; if (A * A + B * B < 1) { if (c > 37) { n = (j = c & 1) ? 6 : 4; o = .5 / (a + .01) + C(b * 125) * 3 - a * 300; w = b * h; return [o * C(n) + w * S(n) + j * 610 - 390, o * S(n) - w * C(n) + 550 - j * 350, 1180 + C(B + A) * 99 - j * 300, .4 - a * .1 + P(1 - B * B, -h * 6) * .15 - a * b * .4 + C(a + b) / 5 + P(C((o * (a + 1) + (B > 0 ? w : -w)) / 25), 30) * .1 * (1 - B * B), o / 1e3 + .7 - o * w * 3e-6] } if (c > 32) { c = c * 1.16 - .15; o = a * 45 - 20; w = b * b * h; z = o * S(c) + w * C(c) + 620; return [o * C(c) - w * S(c), 28 + C(B * .5) * 99 - b * b * b * 60 - z / 2 - h, z, (b * b * .3 + P((1 - (A * A)), 7) * .15 + .3) * b, b * .7] } o = A * (2 - b) * (80 - c * 2); w = 99 - C(A) * 120 - C(b) * (-h - c * 4.9) + C(P(1 - b, 7)) * 50 + c * 2; z = o * S(c) + w * C(c) + 700; return [o * C(c) - w * S(c), B * 99 - C(P(b, 7)) * 50 - c / 3 - z / 1.35 + 450, z, (1 - b / 1.2) * .9 + a * .1, P((1 - b), 20) / 4 + .05] } } setInterval('for(i=0;i<1e4;i++)if(s=p(R(),R(),i%46/.74)){z=s[2];x=~~(s[0]*f/z-h);y=~~(s[1]*f/z-h);if(!m[q=y*f+x]|m[q]>z)m[q]=z,a.fillStyle="rgb("+~(s[3]*h)+","+~(s[4]*h)+","+~(s[3]*s[3]*-80)+")",a.fillRect(x,y,1,1)}', 0)  
+  </script>  
+  <script>
+    document.addEventListener('click', function (event) {
+      for (let i = 0; i < 8; i++) { // 增加爱心数量
+        const heart = createHeart(event);
+        document.body.appendChild(heart);
 
-            // 初始化文字位置
-            textElement = document.getElementById('textDisplay');
-            textX = windowWidth / 2 - textElement.offsetWidth / 2;
-            textY = 20;
-            updateTextPosition();
+        // 添加随机摆动效果
+        requestAnimationFrame(() => {
+          heart.style.setProperty('--x', heart.dataset.x * 1.2 + 'px');
+          heart.style.setProperty('--y', heart.dataset.y * 1.2 + 'px');
+        });
 
-            animateText();
+        heart.addEventListener('animationend', () => heart.remove());
+      }
+      playSound();
+    });
 
-            // 初始化滑块（保持隐藏）
-            opening_ = createDiv();
-            opening_.class('valueDisplay');
-            opening = createSlider(1, 10, fixedOpening, 0.1);
-            opening.class('Slider');
+    function createHeart(event) {
+      const heart = document.createElement('div');
+      heart.className = 'heart';
 
-            vDensity_ = createDiv();
-            vDensity_.class('valueDisplay');
-            vDensity = createSlider(1, 20, 8, 0.1);
-            vDensity.class('Slider');
+      // 动态大小（8-20px）
+      const size = Math.random() * 12 + 8;
+      heart.style.width = heart.style.height = `${size}px`;
 
-            pAlign_ = createDiv();
-            pAlign_.class('valueDisplay');
-            pAlign = createSlider(0, 6, 3.6, 0.05);
-            pAlign.class('Slider');
+      // 浪漫色系（粉红到紫色）
+      const hue = 330 + Math.random() * 30;
+      heart.style.background = `linear-gradient(45deg, hsl(${hue}, 100%, 70%), hsl(${hue}, 100%, 50%))`;
 
-            curve1_ = createDiv();
-            curve1_.class('valueDisplay');
-            curve1 = createSlider(-6, 6, defaultCurve1, 0.1);
-            curve1.class('Slider');
+      // 抛物线运动
+      const angle = (Math.random() - 0.5) * 120; // -60° ~ +60°
+      const distance = 200 + Math.random() * 300;
+      const x = Math.cos(angle * Math.PI / 180) * distance;
+      const y = Math.sin(angle * Math.PI / 180) * distance * 0.8 - 50;
 
-            curve2_ = createDiv();
-            curve2_.class('valueDisplay');
-            curve2 = createSlider(0.5, 1.5, defaultCurve2, 0.1);
-            curve2.class('Slider');
+      heart.dataset.x = x;
+      heart.dataset.y = y;
+      heart.style.setProperty('--x', x + 'px');
+      heart.style.setProperty('--y', y + 'px');
 
-            frameRate(60);
-        }
+      // 随机起始位置偏移
+      const posX = event.clientX + (Math.random() - 0.5) * 40;
+      const posY = event.clientY + (Math.random() - 0.5) * 40;
+      heart.style.left = `${posX - size / 2}px`;
+      heart.style.top = `${posY - size / 2}px`;
 
-        function draw() {
-            clear();
-            orbitControl(1.5, 1.5, 0.3); // 调整后的Safari专用参数
-            rotateX(-30);
-            
-            for (let r = 0; r <= rows; r++) {
-                v.push([]);
-                for (let theta = 0; theta <= cols; theta++) {
-                    let phi = (180 / opening.value()) * Math.exp(-theta * t_D / (vDensity.value() * 180));
-                    let petalCut = 1 - (1 / 2) * pow((5 / 4) * pow(1 - ((pAlign.value() * theta * t_D % 360) / 180), 2) - 1 / 4, 2);
-                    let hangDown = curve1.value() * pow(r * r_D, 2) * pow(curve2.value() * r * r_D - 1, 2) * sin(phi);
+      return heart;
+    }
 
-                    let pX = 260 * petalCut * (r * r_D * sin(phi) + hangDown * cos(phi)) * sin(theta * t_D);
-                    let pY = -260 * petalCut * (r * r_D * cos(phi) - hangDown * sin(phi));
-                    let pZ = 260 * petalCut * (r * r_D * sin(phi) + hangDown * cos(phi)) * cos(theta * t_D);
-                    let pos = createVector(pX, pY, pZ);
-                    v[r].push(pos);
-                }
-            }
+    function playSound() {
+      //const audio = new Audio('https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg');
+      //audio.volume = 0.3;
+      //audio.play();
+    }
+  </script>
+</body> 
+ 
 
-            for (let r = 0; r < v.length; r++) {
-                fill(340, 100, -20 + r * r_D * 120);
-                for (let theta = 0; theta < v[r].length; theta++) {
-                    if (r < v.length - 1 && theta < v[r].length - 1) {
-                        beginShape();
-                        vertex(v[r][theta].x, v[r][theta].y, v[r][theta].z);
-                        vertex(v[r + 1][theta].x, v[r + 1][theta].y, v[r + 1][theta].z);
-                        vertex(v[r + 1][theta + 1].x, v[r + 1][theta + 1].y, v[r + 1][theta + 1].z);
-                        vertex(v[r][theta + 1].x, v[r][theta + 1].y, v[r][theta + 1].z);
-                        endShape(CLOSE);
-                    }
-                }
-            }
-
-            v = [];
-        }
-
-        function updateTextPosition() {
-            textElement.style.transform = `translate(${textX}px, ${textY}px)`;
-        }
-
-        function animateText() {
-            textX += velocityX;
-            textY += velocityY;
-
-            velocityY += gravity;
-            velocityX *= friction;
-            velocityY *= friction;
-
-            const maxX = windowWidth - textElement.offsetWidth;
-            const maxY = windowHeight - textElement.offsetHeight;
-
-            if (textX <= 0) {
-                textX = 0;
-                velocityX = Math.abs(velocityX) * bounce;
-            } else if (textX >= maxX) {
-                textX = maxX;
-                velocityX = -Math.abs(velocityX) * bounce;
-            }
-
-            if (textY <= 0) {
-                textY = 0;
-                velocityY = Math.abs(velocityY) * bounce;
-            } else if (textY >= maxY) {
-                textY = maxY;
-                velocityY = -Math.abs(velocityY) * bounce;
-            }
-
-            updateTextPosition();
-            requestAnimationFrame(animateText);
-        }
-
-        function windowResized() {
-            resizeCanvas(windowWidth, windowHeight);
-            const maxX = windowWidth - textElement.offsetWidth;
-            const maxY = windowHeight - textElement.offsetHeight;
-            textX = constrain(textX, 0, maxX);
-            textY = constrain(textY, 0, maxY);
-            updateTextPosition();
-        }
-    </script>
-</body>
-</html>
+</html> 
