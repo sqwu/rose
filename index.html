@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>小希</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap');
@@ -8,12 +10,14 @@
             margin: 0;
             overflow: hidden;
             background-color: #f5e6d3;
+            -webkit-tap-highlight-color: transparent;
         }
         #canvas {
             position: fixed;
             top: 0;
             left: 0;
             z-index: 1;
+            touch-action: none;
         }
         .valueDisplay {
             display: none;
@@ -36,11 +40,11 @@
             backdrop-filter: blur(5px);
             z-index: 2;
             background: linear-gradient(45deg, #ff69b4, #ffb6c1, #fff);
-          -webkit-background-clip: text;
-          text-shadow: 2px 2px 4px rgba(255,105,180,0.3),
-                      -2px -2px 4px rgba(255,182,193,0.3),
-                      0 0 8px rgba(255,255,255,0.5);
-          animation: glow 1.5s ease-in-out infinite alternate;
+            -webkit-background-clip: text;
+            text-shadow: 2px 2px 4px rgba(255,105,180,0.3),
+                        -2px -2px 4px rgba(255,182,193,0.3),
+                        0 0 8px rgba(255,255,255,0.5);
+            animation: glow 1.5s ease-in-out infinite alternate;
         }
         #textDisplay:hover {
             transform: scale(1.05);
@@ -73,8 +77,6 @@
             filter: drop-shadow(0 0 8px rgba(255,182,193,0.9));
           }
         }
-
-        /* 新增爱心特效 */
         #textDisplay::after {
           content: "✨";
           position: absolute;
@@ -82,7 +84,6 @@
           top: -0.2em;
           animation: sparkle 1s linear infinite;
         }
-
         @keyframes sparkle {
           0% { transform: scale(0.8); opacity: 0.8; }
           50% { transform: scale(1.2); opacity: 1; }
@@ -124,6 +125,15 @@
         function setup() {
             canvas = createCanvas(windowWidth, windowHeight, WEBGL);
             canvas.id('canvas');
+            
+            // 移动端触摸优化
+            canvas.elt.style.touchAction = 'none';
+            canvas.elt.addEventListener('touchstart', e => e.preventDefault());
+            canvas.elt.addEventListener('touchmove', e => e.preventDefault());
+            
+            // 调整轨道控制灵敏度
+            setMoveThreshold(1);
+            setShakeThreshold(30);
 
             colorMode(HSB);
             angleMode(DEGREES);
@@ -135,10 +145,9 @@
             textY = 20;
             updateTextPosition();
 
-            // 开始文字动画
             animateText();
 
-            // Initialize sliders
+            // 初始化滑块（保持隐藏）
             opening_ = createDiv();
             opening_.class('valueDisplay');
             opening = createSlider(1, 10, fixedOpening, 0.1);
@@ -204,7 +213,7 @@
 
         function draw() {
             clear();
-            orbitControl(4, 4);
+            orbitControl(2, 2, 0.5); // 调整后的轨道控制参数
             rotateX(-30);
 
             for (let r = 0; r <= rows; r++) {
